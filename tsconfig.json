@@ -1,5 +1,5 @@
 {
-  "include": ["**/*.mts", ".github/**/*.mts", "**/*.js", ".github/**/*.js"],
+  "include": ["**/*.mts", ".github/**/*.mts"],
   "compilerOptions": {
     "module": "nodenext",
     "target": "esnext",
@@ -9,9 +9,6 @@
     "skipLibCheck": true,
     "noEmit": true,
     // Node needs the .ts extensions to run properly
-    "allowImportingTsExtensions": true,
-    // TODO: convert js files to mts
-    "allowJs": true,
-    "checkJs": true
+    "allowImportingTsExtensions": true
   }
 }
