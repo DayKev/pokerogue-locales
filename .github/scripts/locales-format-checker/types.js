@@ -15,7 +15,7 @@
  */
 
 /**
- * @typedef {Object.<string, incorrectFileName[]} incorrectFileNames
+ * @typedef {Object.<string, incorrectFileName[]>} incorrectFileNames
  */
 
 /**

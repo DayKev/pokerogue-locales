@@ -1,7 +1,8 @@
-import * as core from "@actions/core";
+import { endGroup } from "@actions/core";
 import { checkLocaleFileNames, checkLocaleKeys, checkLocaleMissingKeys } from "./check-locales.js";
 import { COLORS, mainLanguage } from "./constants.js";
 import { getLanguageCodes } from "./get-files.js";
+import { failed, logInfo, logStartGroup } from "./utils.js";
 
 /**
  * @packageDocumentation
@@ -11,17 +12,19 @@ import { getLanguageCodes } from "./get-files.js";
  * If no languages are provided, it will check all languages.
  */
 
+/** @import { fileKeys, incorrectFileName, incorrectFileNames, incorrectKeys, options } from "./types.js" */
+
 const version = "1.0.0";
 
 async function main() {
-  core.info(`\u001b[38;2;255;127;80m🍳 Locales format checker v${version}`);
+  logInfo(COLORS["orange-red"], `🍳 Locales format checker v${version}`);
 
   try {
     const args = process.argv.slice(2);
     const options = parseArgs(args);
 
     if (!options.checkKeys && !options.checkFileNames && !options.checkMissing) {
-      core.setFailed("✗ Error: No options provided!");
+      failed("✗ Error: No options provided!");
       return;
     }
 
@@ -33,15 +36,15 @@ async function main() {
     let mainLanguageMissingKeys = {};
 
     if (options.checkKeys) {
-      core.info(`${COLORS.info}Checking key format...`);
+      logInfo(COLORS.info, "Checking key format...");
       keyOutput = await checkLocaleKeys(options);
     }
     if (options.checkFileNames) {
-      core.info(`${COLORS.info}Checking file name format...`);
+      logInfo(COLORS.info, "Checking file name format...");
       fileNameOutput = await checkLocaleFileNames(options);
     }
     if (options.checkMissing) {
-      core.info(`${COLORS.info}Checking for missing keys...`);
+      logInfo(COLORS.info, "Checking for missing keys...");
       mainLanguageMissingKeys = await checkLocaleMissingKeys(options);
     }
 
@@ -57,7 +60,7 @@ async function main() {
       displayMissingResult(mainLanguageMissingKeys, options);
     }
   } catch (error) {
-    core.setFailed(error.message);
+    failed(error.message);
   }
 }
 
@@ -97,8 +100,8 @@ function parseArgs(args) {
         options.verbose = true;
         break;
       default:
-        core.setFailed(`Unknown option: ${arg}`);
-        showHelpText();
+        failed(`Unknown option: ${arg}`);
+        // showHelpText(); // <-- this function doesn't exist
         process.exit();
     }
   }
@@ -106,7 +109,7 @@ function parseArgs(args) {
   const validLanguages = getLanguageCodes();
   for (const language of languageArgs) {
     if (!validLanguages.includes(language)) {
-      core.setFailed(`Invalid language: ${language}`);
+      failed(`Invalid language: ${language}`);
       process.exit();
     }
     options.languages.push(language);
@@ -124,24 +127,24 @@ function parseArgs(args) {
  * @param {options} options - The options used.
  */
 function displayKeyResults(result, options) {
-  core.info(`${COLORS.info}Key Result:`);
+  logInfo(COLORS.info, "Key Result:");
   if (Object.keys(result).length > 0) {
-    core.setFailed("Found incorrect keys");
+    failed("Found incorrect keys");
     // Log incorrect keys per language
     for (const languageCode of options.languages) {
       const incorrectKeysForLang = Object.entries(result).filter(([path]) => path.includes(`/${languageCode}/`));
       const incorrectKeysCount = incorrectKeysForLang.reduce((sum, [_, val]) => sum + val.length, 0);
       const color = incorrectKeysCount > 0 ? COLORS.red : COLORS.green;
-      core.startGroup(`${color}Result for ${languageCode}`);
-      core.info(`${color}${languageCode}: ${incorrectKeysCount} incorrect keys`);
+      logStartGroup(color, `Result for ${languageCode}`);
+      logInfo(color, `${languageCode}: ${incorrectKeysCount} incorrect keys`);
       // log all incorrect keys for the language
       displayIncorrectKeys(languageCode, Object.fromEntries(incorrectKeysForLang));
-      core.endGroup();
+      endGroup();
     }
     const incorrectKeyCount = Object.values(result).reduce((sum, val) => sum + val.length, 0);
-    core.setFailed(`✗ Found ${incorrectKeyCount} incorrect keys in ${options.languages.length} languages.`);
+    failed(`✗ Found ${incorrectKeyCount} incorrect keys in ${options.languages.length} languages.`);
   } else {
-    core.info(`${COLORS.green}✔ No incorrect keys found!`);
+    logInfo(COLORS.green, "✔ No incorrect keys found!");
     process.exitCode = 0;
   }
 }
@@ -152,9 +155,9 @@ function displayKeyResults(result, options) {
  * @param {options} options - The options used.
  */
 function displayFileNameResults(result, options) {
-  core.info(`${COLORS.info}File Name Result:`);
+  logInfo(COLORS.info, "File Name Result:");
   if (Object.keys(result).length > 0) {
-    core.setFailed("Found incorrect file names");
+    failed("Found incorrect file names");
     // Log incorrect file names per language
     for (const languageCode of options.languages) {
       const incorrectFileNamesForLang = result[languageCode];
@@ -163,15 +166,15 @@ function displayFileNameResults(result, options) {
       }
       const color = incorrectFileNamesForLang.length > 0 ? COLORS.red : COLORS.green;
 
-      core.startGroup(`${color}Result for ${languageCode}`);
-      core.info(`${color}${languageCode}: ${incorrectFileNamesForLang.length} incorrect file names`);
+      logStartGroup(color, `Result for ${languageCode}`);
+      logInfo(color, `${languageCode}: ${incorrectFileNamesForLang.length} incorrect file names`);
       displayIncorrectFileNames(incorrectFileNamesForLang);
-      core.endGroup();
+      endGroup();
     }
     const incorrectFileNameCount = Object.values(result).reduce((sum, val) => sum + val.length, 0);
-    core.setFailed(`✗ Found ${incorrectFileNameCount} incorrect file names in ${options.languages.length} languages.`);
+    failed(`✗ Found ${incorrectFileNameCount} incorrect file names in ${options.languages.length} languages.`);
   } else {
-    core.info(`${COLORS.green}✔ No incorrect file names found!`);
+    logInfo(COLORS.green, "✔ No incorrect file names found!");
     process.exitCode = 0;
   }
 }
@@ -190,10 +193,10 @@ function displayIncorrectKeys(languageCode, incorrectKeysForLang) {
       continue;
     }
     // log the filepath
-    core.info(`${COLORS.file}File: ${filePath}`);
+    logInfo(COLORS.file, `File: ${filePath}`);
     for (const incorrectKey of incorrectKeys) {
-      core.info(`${COLORS.red}Incorrect key found at line ${incorrectKey.line}: ${incorrectKey.incorrectKey}`);
-      core.info(`${COLORS.corrected}Correct key: ${incorrectKey.correctedKey}`);
+      logInfo(COLORS.red, `Incorrect key found at line ${incorrectKey.line}: ${incorrectKey.incorrectKey}`);
+      logInfo(COLORS.corrected, `Correct key: ${incorrectKey.correctedKey}`);
     }
   }
 }
@@ -207,8 +210,8 @@ function displayIncorrectFileNames(incorrectFileNamesForLang) {
     return;
   }
   for (const incorrectFileName of incorrectFileNamesForLang) {
-    core.info(`${COLORS.red}Incorrect file name: ${incorrectFileName.incorrectFileName}`);
-    core.info(`${COLORS.corrected}Correct file name: ${incorrectFileName.correctedFileName}`);
+    logInfo(COLORS.red, `Incorrect file name: ${incorrectFileName.incorrectFileName}`);
+    logInfo(COLORS.corrected, `Correct file name: ${incorrectFileName.correctedFileName}`);
   }
 }
 
@@ -218,9 +221,9 @@ function displayIncorrectFileNames(incorrectFileNamesForLang) {
  * @param {options} options - The options used.
  */
 function displayMissingResult(result, options) {
-  core.info(`${COLORS.info}Missing keys Result:`);
+  logInfo(COLORS.info, "Missing keys Result:");
   if (Object.keys(result).length > 0) {
-    core.setFailed("Found missing keys");
+    failed("Found missing keys");
     // Log missing keys per language
     for (const languageCode of options.languages) {
       if (languageCode === mainLanguage) {
@@ -229,16 +232,16 @@ function displayMissingResult(result, options) {
       const missingKeysForLang = Object.entries(result).filter(([path]) => path.includes(`/${languageCode}/`));
       const incorrectKeysCount = missingKeysForLang.reduce((sum, [_, val]) => sum + val.length, 0);
       const color = incorrectKeysCount > 0 ? COLORS.red : COLORS.green;
-      core.startGroup(`${color}Result for ${languageCode}`);
-      core.info(`${color}${languageCode}: ${incorrectKeysCount} missing keys`);
+      logStartGroup(color, `Result for ${languageCode}`);
+      logInfo(color, `${languageCode}: ${incorrectKeysCount} missing keys`);
       // log all missing keys for the language
       displayMissingKeys(languageCode, Object.fromEntries(missingKeysForLang));
-      core.endGroup();
+      endGroup();
     }
     const missingKeyCount = Object.values(result).reduce((sum, val) => sum + val.length, 0);
-    core.setFailed(`✗ Found ${missingKeyCount} missing keys in ${options.languages.length} languages.`);
+    failed(`✗ Found ${missingKeyCount} missing keys in ${options.languages.length} languages.`);
   } else {
-    core.info(`${COLORS.green}✔ No missing keys found!`);
+    logInfo(COLORS.green, "✔ No missing keys found!");
     process.exitCode = 0;
   }
 }
@@ -257,9 +260,9 @@ function displayMissingKeys(languageCode, missingKeysForLang) {
       continue;
     }
     // log the filepath
-    core.info(`${COLORS.file}File: ${filePath}`);
+    logInfo(COLORS.file, `File: ${filePath}`);
     for (const missing of missingKeys) {
-      core.info(`${COLORS.red}Missing key found: ${missing}`);
+      logInfo(COLORS.red, `Missing key found: ${missing}`);
     }
   }
 }
