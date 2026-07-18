@@ -21,7 +21,7 @@ async function main() {
     const options = parseArgs(args);
 
     if (!options.checkKeys && !options.checkFileNames && !options.checkMissing) {
-      core.setFailed("✗ Error: No options provided!");
+      core.setFailed(COLORS.red + "✗ Error: No options provided!");
       return;
     }
 
