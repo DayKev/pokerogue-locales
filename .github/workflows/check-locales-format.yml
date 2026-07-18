@@ -30,17 +30,20 @@ jobs:
       - name: Install Node.js dependencies
         run: pnpm add @actions/core
 
-      - name: Validate locale keys
-        id: check-keys-format
-        run: pnpm check-locales-format:keys
-        if: ${{ !cancelled() }}
+      - name: test
+        run: node ./.github/scripts/locales-format-checker/main.js
 
-      - name: Validate locale file names
-        id: check-file-names
-        run: pnpm check-locales-format:files
-        if: ${{ !cancelled() }}
+      # - name: Validate locale keys
+      #   id: check-keys-format
+      #   run: pnpm check-locales-format:keys
+      #   if: ${{ !cancelled() }}
 
-      - name: Validate main language keys exist
-        id: check-keys-exist
-        run: pnpm check-locales-format:missing
-        if: ${{ !cancelled() }}
+      # - name: Validate locale file names
+      #   id: check-file-names
+      #   run: pnpm check-locales-format:files
+      #   if: ${{ !cancelled() }}
+
+      # - name: Validate main language keys exist
+      #   id: check-keys-exist
+      #   run: pnpm check-locales-format:missing
+      #   if: ${{ !cancelled() }}
